@@ -1,10 +1,15 @@
 package com.example.cpen321application.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.cpen321application.BuildConfig
+import com.example.cpen321application.auth.CredentialManagerGoogleAuthenticator
+import com.example.cpen321application.auth.GoogleAuthenticator
 import com.example.cpen321application.ui.home.HomeScreen
 import com.example.cpen321application.ui.live.LiveUpdatesScreen
 import com.example.cpen321application.ui.login.LoginScreen
@@ -22,7 +27,15 @@ object Routes {
 fun AppNavHost(
     apiBaseUrl: String,
     navController: NavHostController = rememberNavController(),
+    authenticator: GoogleAuthenticator? = null,
 ) {
+    // Credential Manager needs the Activity context to show its system sheet,
+    // so the real authenticator is created here rather than in MainActivity.
+    val context = LocalContext.current
+    val googleAuthenticator = authenticator ?: remember(context) {
+        CredentialManagerGoogleAuthenticator(context, BuildConfig.GOOGLE_CLIENT_ID)
+    }
+
     NavHost(navController = navController, startDestination = Routes.HOME) {
         composable(Routes.HOME) {
             HomeScreen(
@@ -33,7 +46,10 @@ fun AppNavHost(
             )
         }
         composable(Routes.LOGIN) {
-            LoginScreen(onBack = { navController.popBackStack() })
+            LoginScreen(
+                onBack = { navController.popBackStack() },
+                authenticator = googleAuthenticator,
+            )
         }
         composable(Routes.LIVE_UPDATES) {
             LiveUpdatesScreen(onBack = { navController.popBackStack() })
