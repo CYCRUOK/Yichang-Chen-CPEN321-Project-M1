@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CPEN 321 – M1 Documentation and Reflections – Yichang Chen</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; line-height: 1.4; max-width: 800px; margin: 24px auto; color: #111; }
+  h1 { font-size: 20pt; margin-bottom: 0; }
+  h2 { font-size: 15pt; border-bottom: 1px solid #999; padding-bottom: 3px; margin-top: 28px; }
+  h3 { font-size: 12.5pt; margin-top: 20px; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 14px; font-size: 10.5pt; }
+  th, td { border: 1px solid #888; padding: 5px 7px; vertical-align: top; text-align: left; }
+  th { background: #eee; }
+  code { font-family: Consolas, "Courier New", monospace; font-size: 10pt; background: #f3f3f3; padding: 0 3px; }
+  pre { background: #f3f3f3; padding: 8px; font-size: 9.5pt; overflow-x: auto; }
+  .meta { color: #444; margin-top: 2px; }
+  .fill { background: #fff3c4; }
+</style>
+</head>
+<body>
+
+<h1>CPEN 321 – M1: App Skeleton</h1>
+<p class="meta">Documentation and Reflections · Yichang Chen · September 2026</p>
+
+<h2>1. Development Info</h2>
+
+<h3>1.1 Repository</h3>
+<table>
+  <tr><th style="width:32%">GitHub repository</th><td><a href="https://github.com/CYCRUOK/Yichang-Chen-CPEN321-Project-M1">https://github.com/CYCRUOK/Yichang-Chen-CPEN321-Project-M1</a></td></tr>
+  <tr><th>Submitted commit (main)</th><td><code>__COMMIT_SHA__</code></td></tr>
+  <tr><th>Submitted APK</th><td><code>M1_CPEN321Application.apk</code> – release build, signed with the developer's release key (SHA-1 <code>49:51:EE:37:A4:56:5A:C8:26:D9:DD:AE:4B:F6:C5:3B:2E:09:D3:BB</code>, registered as an Android OAuth client).</td></tr>
+</table>
+
+<h3>1.2 Back-end server</h3>
+<table>
+  <tr><th style="width:32%">Public IP</th><td><code>8.229.19.28</code> (Google Cloud Compute Engine, <code>us-west1</code>, e2-small, Ubuntu 24.04, static IP)</td></tr>
+  <tr><th>Domain name</th><td><code>8-229-19-28.sslip.io</code> (sslip.io resolves the IP encoded in the name; no DNS records to manage)</td></tr>
+  <tr><th>Base URL used by the APK</th><td><code>https://8-229-19-28.sslip.io</code> – HTTPS with a Let's Encrypt certificate (valid until 2026-12-16, auto-renewed by certbot). HTTP on port 80 redirects to HTTPS.</td></tr>
+  <tr><th>Endpoints</th><td>
+    <code>GET /health</code>, <code>GET /api/server-ip</code>, <code>GET /api/server-time</code>, <code>GET /api/name</code>, <code>GET /api/ws-status</code>,
+    WebSocket <code>wss://8-229-19-28.sslip.io/ws</code> (relay of <code>wss://8.229.22.124</code>).</td></tr>
+  <tr><th>How it runs</th><td>nginx (TLS termination, WebSocket upgrade for <code>/ws</code>) → Docker Compose → Node 24 container running the compiled server (<code>node dist/index.js</code>), <code>restart: unless-stopped</code>; verified to come back by itself after a VM reboot.</td></tr>
+</table>
+
+<h3>1.3 Secrets, configuration parameters and setup steps for TAs</h3>
+<p>Everything below is also in the repository <code>README.md</code>. Nothing needs to be configured to grade the submitted APK against the running server – the values are already baked in.</p>
+
+<p><strong>Back-end</strong> (<code>backend/.env</code>, copy from <code>backend/.env.example</code>):</p>
+<table>
+  <tr><th style="width:32%">Variable</th><th>Value / meaning</th></tr>
+  <tr><td><code>PORT</code></td><td><code>3000</code></td></tr>
+  <tr><td><code>OWNER_FIRST_NAME</code> / <code>OWNER_LAST_NAME</code></td><td><code>Yichang</code> / <code>Chen</code> – returned by <code>GET /api/name</code></td></tr>
+  <tr><td><code>UPSTREAM_WS_URL</code></td><td><code>wss://8.229.22.124</code> – course pixel stream relayed on <code>/ws</code></td></tr>
+  <tr><td><code>SERVER_PUBLIC_IP</code></td><td>optional override; when unset the server asks <code>api64.ipify.org</code></td></tr>
+  <tr><td><code>JWT_SECRET</code>, <code>MONGODB_URI</code>, <code>GOOGLE_CLIENT_ID</code></td><td>present in the template, <em>not used</em> by M1 (no database, no server-side token verification)</td></tr>
+</table>
+<p>Run locally: <code>cd backend &amp;&amp; npm install &amp;&amp; npm run dev</code>, or <code>./scripts/run-backend.sh</code> (Docker Compose). Tests: <code>./scripts/run-backend-interface-tests.sh</code>.
+Cloud: <code>scripts/cloud-setup.sh &lt;repo-url&gt;</code> then <code>DOMAIN=… EMAIL=… scripts/cloud-https.sh</code> on a fresh Ubuntu VM with TCP 80/443 open.</p>
+
+<p><strong>Front-end</strong> (<code>frontend/local.properties</code>, copy from <code>frontend/local.properties.example</code>):</p>
+<table>
+  <tr><th style="width:32%">Property</th><th>Value / meaning</th></tr>
+  <tr><td><code>sdk.dir</code></td><td>path to the Android SDK (Platform 35 for compileSdk – AGP installs it automatically – and 36 for the emulator)</td></tr>
+  <tr><td><code>API_BASE_URL</code></td><td><code>https://8-229-19-28.sslip.io</code> (the WebSocket URL is derived: <code>wss://…/ws</code>)</td></tr>
+  <tr><td><code>GOOGLE_CLIENT_ID</code></td><td><code>1051534582649-8v5q22t61qss82jog37uvgfop025tcg9.apps.googleusercontent.com</code> – the <em>Web application</em> OAuth client ID used by Credential Manager (public, baked into the APK)</td></tr>
+  <tr><td><code>RELEASE_STORE_FILE</code> … <code>RELEASE_KEY_PASSWORD</code></td><td>optional release signing; without them <code>assembleRelease</code> signs with the debug key</td></tr>
+</table>
+<p>Build: open <code>frontend/</code> in Android Studio (Narwhal 3 / 2025.1.3 or newer, required by AGP 8.13) or <code>cd frontend &amp;&amp; ./gradlew assembleRelease</code>. Run: <code>./scripts/run-frontend.sh</code> (expects an AVD named <code>Pixel_9</code>). Tests: <code>./gradlew testDebugUnitTest</code> (host) and <code>./scripts/run-frontend-e2e-tests.sh</code> / <code>./gradlew connectedDebugAndroidTest</code> (instrumented).</p>
+
+<p><strong>Google sign-in note.</strong> Google only issues an ID token to APKs whose signing certificate SHA-1 is registered as an Android OAuth client of the project. The submitted APK's key is registered. An APK you build yourself is signed with <em>your</em> debug key, so Google sign-in in it will fail with "Sign-in cancelled, or this build's signing key is not registered…" unless that SHA-1 is added to the project (I can add a TA's SHA-1 on request). Buttons 2 and 3 do not depend on this.</p>
+
+<h3>1.4 User accounts / credentials needed to exercise the app</h3>
+<ul>
+  <li>Button 1 needs any Google account on the device; the OAuth consent screen is published (External), so no test-user allow-list applies.</li>
+  <li>No app-specific accounts, passwords or API keys are needed. The ISS position API (<code>api.wheretheiss.at</code>) and ipify are free and key-less.</li>
+</ul>
+
+<h3>1.5 Physical device</h3>
+<p>FCNT arrows M08 (Android 15). The app compiles against API 35 (pinned by the course template) and runs on API 36 (Pixel 9 / Android Baklava emulator).</p>
+
+<h3>1.6 Button 3 – Timer and "While You Waited"</h3>
+<p>The user sets a timer in minutes and seconds. The countdown is derived from a fixed deadline (not from counting ticks), so it stays exact across rotation and while the app is in the background. When it goes off the phone vibrates, posts a "Time's up!" notification (Android 13+ requests the notification permission on the first Start), confetti falls over the screen and a <strong>"While you waited N s…"</strong> summary appears, telling the user what happened in the world during exactly the time they waited:</p>
+<ul>
+  <li><strong>The International Space Station</strong> – its live position is fetched from <code>https://api.wheretheiss.at</code> when the timer starts and again when it fires; the app computes the great-circle distance flown (haversine at the ISS altitude) and draws both fixes and the hop on a mini equirectangular world map with coarse continent outlines drawn from an in-app polygon table.</li>
+  <li><strong>Earth</strong> travelled 29.78 km/s × t along its orbit.</li>
+  <li><strong>Light</strong> travelled 299 792 km/s × t, expressed in Moon round trips.</li>
+  <li>Whether the <strong>sunlight</strong> that left the Sun at Start (8 min 19 s away) has arrived yet.</li>
+  <li>Approximate <strong>heartbeats, blinks and babies born worldwide</strong>.</li>
+</ul>
+<p>If the ISS API is unreachable the card degrades gracefully and the locally computed facts are still shown. The surprise therefore combines an external API, the app's own computation, sensors/OS features (vibration, notifications) and an animation, and its content is tied to the timer duration itself.</p>
+
+<h3>1.7 Limitations</h3>
+<ul>
+  <li>Google sign-in works only for APKs signed with a registered key (submitted APK, or the developer's debug key); see 1.3.</li>
+  <li>The name shown for the signed-in user is the Google account's profile name (given + family name). If the account has no family name set, only the given name is displayed.</li>
+  <li>The ID token is not verified server-side; the three information APIs are public. This is acceptable for M1 but not for the project.</li>
+  <li>Client IP shows the device's private Wi-Fi/mobile address (IPv4 preferred, IPv6 otherwise), not its NAT public address.</li>
+  <li>The pixel stream has no "new image" marker; the canvas is cleared when the server pauses for more than 2 s. Joining mid-image shows a partial first image until the next pause.</li>
+  <li>The timer runs inside the app process; if Android kills the app in the background, the alert is lost (no AlarmManager / foreground service).</li>
+  <li>The ISS card needs internet; the ISS distance is an estimate from two position samples (or speed × time if only one sample was obtained).</li>
+  <li>The continent outlines on the mini map are deliberately coarse hand-simplified polygons.</li>
+  <li>The development machine has hardware virtualization disabled in its BIOS, so the Pixel 9 API 36 emulator could not be run locally; testing was done on a physical Android 15 device plus a successful API 36 build. <span class="fill">[Update this line if you enable VT-x and run the emulator before submitting.]</span></li>
+  <li>The certificate is bound to <code>8-229-19-28.sslip.io</code>; if the VM's static IP ever changed, the domain, certificate and <code>API_BASE_URL</code> would all have to be regenerated.</li>
+</ul>
+
+<h2>2. Time and AI Reliance Distribution</h2>
+<p class="fill">Fill in the hours from your own records; the estimates below are based on the development session log.</p>
+<table>
+  <tr><th style="width:5%">ID</th><th>Task (a short description)</th><th style="width:20%">Time spent (hours)</th><th style="width:20%">AI reliance 0–100% (estimate)</th></tr>
+  <tr><td>1</td><td>Environment setup (Android Studio upgrade, SDK, device, Node, Git, GitHub repo)</td><td class="fill">1.5</td><td>50%</td></tr>
+  <tr><td>2</td><td>Back-end: three REST APIs (IP, time, name) + Jest tests</td><td class="fill">1</td><td>90%</td></tr>
+  <tr><td>3</td><td>Android skeleton: three buttons, Navigation Compose, instrumented navigation tests</td><td class="fill">1</td><td>90%</td></tr>
+  <tr><td>4</td><td>Google sign-in (Credential Manager) + Google Cloud OAuth configuration</td><td class="fill">1.5</td><td>70%</td></tr>
+  <tr><td>5</td><td>Button 1 information table (server/client IP and time, names) + tests</td><td class="fill">1</td><td>90%</td></tr>
+  <tr><td>6</td><td>Back-end WebSocket relay of the course pixel stream + tests</td><td class="fill">1</td><td>90%</td></tr>
+  <tr><td>7</td><td>Button 2 live pixel-art screen + tests</td><td class="fill">1</td><td>90%</td></tr>
+  <tr><td>8</td><td>Button 3 timer + "While You Waited" surprise (ISS API, map, confetti, notification) + tests</td><td class="fill">2</td><td>85%</td></tr>
+  <tr><td>9</td><td>Cloud deployment (GCP VM, Docker, nginx, Let's Encrypt), release signing, fresh-clone verification</td><td class="fill">2</td><td>80%</td></tr>
+  <tr><td>10</td><td>Documentation (README, this document)</td><td class="fill">1</td><td>80%</td></tr>
+  <tr><td></td><td><strong>Overall</strong></td><td class="fill"><strong>13</strong></td><td><strong>≈ 85%</strong></td></tr>
+</table>
+
+<h2>3. AI Use Reflection</h2>
+<p class="fill">Drafted from the actual development session; please edit so it reads in your own words and reflects your own experience.</p>
+
+<h3>Task A – Implementing the back-end WebSocket relay and the live pixel-art screen</h3>
+<p><strong>Task.</strong> Relay the course server's pixel stream through my own Node.js back-end to the Android app and paint each pixel live on a 16×16 grid.</p>
+<p><strong>Tools.</strong> Claude Code (Anthropic) running the Claude Opus 5 model inside the Claude desktop app, with access to my terminal, the repository and the connected phone through <code>adb</code>.</p>
+<p><strong>Strategy.</strong> Before writing any code I had the assistant <em>probe</em> the course server with a throw-away script so that we knew the real behaviour (one pixel every 50 ms, 256 pixels per image, a 5-second pause, no "clear" message, a valid Let's Encrypt certificate). The design followed from those facts: the relay forwards messages byte-for-byte, and the client clears the canvas when it detects a pause longer than 2 s. I asked for the relay to be written against an injectable upstream so the tests could run against a fake WebSocket server instead of the internet; the assistant wrote the fake, the reconnect test and the fan-out test, then verified the real path end-to-end with a probe client and, on the Android side, by installing the app and screenshotting the butterfly assembling on my phone.</p>
+<p><strong>Advantages.</strong> The speed of going from "unknown protocol" to "verified working on the device" was the biggest win – measuring the server first avoided guessing, and the assistant produced the boilerplate (OkHttp listener → Flow, ViewModel state, Canvas drawing, Jest tests with fake servers) in minutes. Having it run the tests and look at screenshots itself meant bugs (e.g. a flaky navigation assertion during the 20 Hz repaint) were found and fixed before I saw them.</p>
+<p><strong>Disadvantages.</strong> Generated code is easy to accept without fully reading it; I had to deliberately review the relay (for example, that it really does not batch or reformat messages, which the assignment forbids) and the gap-detection heuristic, which is an assumption about the server rather than a documented contract. The assistant's first test for the timer also asserted an intermediate state that is never observable with instant fakes – a reminder that AI-written tests can encode the wrong expectation and need the same scrutiny as production code.</p>
+
+<h3>Task B – Google sign-in and the release-signing / OAuth setup</h3>
+<p><strong>Task.</strong> Sign the user in with Google using the current Credential Manager API and make it work for both the debug and the release APK.</p>
+<p><strong>Tools.</strong> Claude Code with Claude Opus 5; Google Cloud Console (done by me by hand).</p>
+<p><strong>Strategy.</strong> I split the work along the boundary of what the assistant can and cannot do: it wrote the <code>GoogleAuthenticator</code> abstraction, the view model and UI tests driven by a fake authenticator, and it extracted the SHA-1 fingerprints of the debug and release keys with <code>keytool</code>; I created the OAuth clients and consent screen in the console because that needs my Google account. When the release build failed to sign in, the assistant explained that Credential Manager reports an unregistered signing key as a plain "cancelled" and improved the error message so the cause is visible to graders.</p>
+<p><strong>Advantages.</strong> The Credential Manager API and the <code>googleid</code> library are recent and their documentation is scattered; the assistant knew the current recommended flow (<code>GetSignInWithGoogleOption</code>, parsing <code>GoogleIdTokenCredential</code>) and the exact console steps, which saved a lot of searching. Wrapping the system dialog behind an interface made the rest of the screen testable without Google.</p>
+<p><strong>Disadvantages.</strong> The assistant cannot see or drive the Google account picker, so the real sign-in path could only be confirmed manually on my phone; and it could not tell me in advance that the release key needs its own OAuth client entry – we only learned it when the release APK failed. Anything that touches account settings (publishing the consent screen, changing my Google profile name) stays a manual step.</p>
+
+<h3>Task C – Cloud deployment with HTTPS/WSS</h3>
+<p><strong>Task.</strong> Deploy the back-end on Google Cloud with a trusted certificate so the app can use HTTPS and WSS without trusting a self-signed CA.</p>
+<p><strong>Tools.</strong> Claude Code with Claude Opus 5, connected to the VM over SSH with a key generated for that purpose.</p>
+<p><strong>Strategy.</strong> I created the VM and firewall rules in the console; the assistant wrote two idempotent scripts (<code>cloud-setup.sh</code>: Docker, clone, <code>.env</code>, Compose; <code>cloud-https.sh</code>: nginx + certbot with the WebSocket upgrade) and ran them over SSH, then re-ran the same smoke test script it had used locally against the public URL, checked the certificate chain with <code>openssl</code>, and rebooted the VM to prove the service comes back on its own. Using an <code>sslip.io</code> name avoided registering a domain.</p>
+<p><strong>Advantages.</strong> The deployment became reproducible code in the repository rather than a sequence of manual commands, and every step was verified immediately (the first Docker build failed because the Windows-generated lock file lacked a Linux-only optional dependency – the assistant diagnosed it from the build log and regenerated the lock file inside the same Node image).</p>
+<p><strong>Disadvantages.</strong> The assistant had full shell access to the VM; that is convenient but I had to be comfortable with it running <code>sudo</code> and rebooting the machine. Cloud-console steps (billing, firewall rules, static IP) remain manual and were the source of the only misconfiguration we hit (port 3000 not opened – harmless because only 443 is used in the end). Line-ending problems (CRLF from Windows breaking a bash script) also cost a couple of iterations.</p>
+
+<h3>Was AI used to prepare this document?</h3>
+<p>Yes. Claude Code drafted this document from the development session (commands run, test results, screenshots); I reviewed and edited it, and the time estimates in Section 2 are mine.</p>
+
+<h3>Additional information</h3>
+<p>The whole milestone was developed as a step-by-step plan with a test for every step: back-end APIs → app skeleton → Google sign-in → timer → relay → live screen → information table → cloud → release. Every step was verified on a real device via <code>adb</code> before moving on, and the repository history mirrors those steps. Test counts at submission: 26 back-end Jest tests, 36 Android host unit tests, 18 instrumented E2E tests.</p>
+
+</body>
+</html>
