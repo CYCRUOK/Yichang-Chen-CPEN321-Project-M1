@@ -10,6 +10,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.cpen321application.BuildConfig
 import com.example.cpen321application.auth.CredentialManagerGoogleAuthenticator
 import com.example.cpen321application.auth.GoogleAuthenticator
+import com.example.cpen321application.info.HttpInfoApi
+import com.example.cpen321application.info.InfoApi
 import com.example.cpen321application.live.OkHttpPixelStream
 import com.example.cpen321application.live.PixelStream
 import com.example.cpen321application.live.relayWebSocketUrl
@@ -35,7 +37,9 @@ fun AppNavHost(
     authenticator: GoogleAuthenticator? = null,
     issTracker: IssTracker = WhereTheIssAtTracker(),
     pixelStream: PixelStream? = null,
+    infoApi: InfoApi? = null,
 ) {
+    val api = infoApi ?: remember(apiBaseUrl) { HttpInfoApi(apiBaseUrl) }
     val stream = pixelStream ?: remember(apiBaseUrl) { OkHttpPixelStream(relayWebSocketUrl(apiBaseUrl)) }
     // Credential Manager needs the Activity context to show its system sheet,
     // so the real authenticator is created here rather than in MainActivity.
@@ -57,6 +61,7 @@ fun AppNavHost(
             LoginScreen(
                 onBack = { navController.popBackStack() },
                 authenticator = googleAuthenticator,
+                infoApi = api,
             )
         }
         composable(Routes.LIVE_UPDATES) {

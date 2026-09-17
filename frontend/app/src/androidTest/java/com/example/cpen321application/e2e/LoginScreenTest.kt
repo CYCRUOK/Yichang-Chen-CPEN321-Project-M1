@@ -1,5 +1,9 @@
 package com.example.cpen321application.e2e
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -9,6 +13,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.cpen321application.auth.GoogleAuthenticator
 import com.example.cpen321application.auth.GoogleUser
 import com.example.cpen321application.auth.SignInException
+import com.example.cpen321application.info.InfoApi
+import com.example.cpen321application.info.InfoApiException
+import com.example.cpen321application.info.OwnerName
 import com.example.cpen321application.ui.login.LoginScreen
 import com.example.cpen321application.ui.theme.CPEN321ApplicationTheme
 import kotlinx.coroutines.CompletableDeferred
@@ -29,10 +36,16 @@ class LoginScreenTest {
 
     private val user = GoogleUser("yichang@example.com", "Yichang", "Chen", "token")
 
-    private fun setLoginScreen(authenticator: GoogleAuthenticator) {
+    private class FakeInfoApi(private val ip: () -> String = { "142.250.217.110" }) : InfoApi {
+        override suspend fun serverIp() = ip()
+        override suspend fun serverTime() = "12:18:22 GMT+01:00"
+        override suspend fun ownerName() = OwnerName("Yichang", "Chen")
+    }
+
+    private fun setLoginScreen(authenticator: GoogleAuthenticator, infoApi: InfoApi = FakeInfoApi()) {
         composeRule.setContent {
             CPEN321ApplicationTheme {
-                LoginScreen(onBack = {}, authenticator = authenticator)
+                LoginScreen(onBack = {}, authenticator = authenticator, infoApi = infoApi)
             }
         }
     }
@@ -95,5 +108,43 @@ class LoginScreenTest {
         composeRule.onNodeWithTag("btn_sign_out").performClick()
 
         composeRule.onNodeWithTag("btn_google_sign_in").assertIsDisplayed()
+    }
+
+    @Test
+    fun afterSignIn_infoTableShowsAllSixValues() {
+        setLoginScreen(object : GoogleAuthenticator {
+            override suspend fun signIn() = user
+            override suspend fun signOut() = Unit
+        })
+        composeRule.onNodeWithTag("btn_google_sign_in").performClick()
+
+        composeRule.onNodeWithTag("info_server_ip").assertTextEquals("142.250.217.110")
+        composeRule.onNodeWithTag("info_server_time").assertTextEquals("12:18:22 GMT+01:00")
+        composeRule.onNodeWithTag("info_client_time").assert(hasTextMatching(Regex("""\d{2}:\d{2}:\d{2} GMT[+-]\d{2}:\d{2}""")))
+        composeRule.onNodeWithTag("info_client_ip").assert(hasTextMatching(Regex(""".+""")))
+        composeRule.onNodeWithTag("info_owner_name").assertTextEquals("Yichang Chen")
+        composeRule.onNodeWithTag("info_user_name").assertTextEquals("Yichang Chen")
+    }
+
+    @Test
+    fun serverUnreachable_showsErrorAndRetryRecovers() {
+        var attempts = 0
+        setLoginScreen(
+            object : GoogleAuthenticator {
+                override suspend fun signIn() = user
+                override suspend fun signOut() = Unit
+            },
+            FakeInfoApi(ip = { if (attempts++ == 0) throw InfoApiException("/api/server-ip: timeout") else "1.2.3.4" }),
+        )
+        composeRule.onNodeWithTag("btn_google_sign_in").performClick()
+        composeRule.onNodeWithTag("info_error").assertTextEquals("/api/server-ip: timeout")
+        composeRule.onNodeWithTag("signed_in_name").assertTextEquals("Yichang Chen")
+
+        composeRule.onNodeWithTag("btn_refresh").performClick()
+        composeRule.onNodeWithTag("info_server_ip").assertTextEquals("1.2.3.4")
+    }
+
+    private fun hasTextMatching(regex: Regex) = SemanticsMatcher("text matches $regex") { node ->
+        node.config.getOrNull(SemanticsProperties.Text)?.any { regex.matches(it.text) } == true
     }
 }

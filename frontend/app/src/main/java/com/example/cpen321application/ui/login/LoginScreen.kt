@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -20,11 +22,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.cpen321application.auth.GoogleAuthenticator
 import com.example.cpen321application.auth.GoogleUser
+import com.example.cpen321application.info.InfoApi
 import com.example.cpen321application.ui.components.FeatureScreen
 
 /** Button 1: Google sign-in, then (step 6) server + client info. */
@@ -32,7 +36,8 @@ import com.example.cpen321application.ui.components.FeatureScreen
 fun LoginScreen(
     onBack: () -> Unit,
     authenticator: GoogleAuthenticator,
-    viewModel: LoginViewModel = viewModel { LoginViewModel(authenticator) },
+    infoApi: InfoApi,
+    viewModel: LoginViewModel = viewModel { LoginViewModel(authenticator, infoApi) },
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -49,7 +54,12 @@ fun LoginScreen(
                 LoginUiState.SignedOut -> SignedOutContent(onSignIn = viewModel::signIn)
                 LoginUiState.SigningIn -> SigningInContent()
                 is LoginUiState.Error -> ErrorContent(message = state.message, onRetry = viewModel::signIn)
-                is LoginUiState.SignedIn -> SignedInContent(user = state.user, onSignOut = viewModel::signOut)
+                is LoginUiState.SignedIn -> SignedInContent(
+                    user = state.user,
+                    info = state.info,
+                    onRefresh = viewModel::loadInfo,
+                    onSignOut = viewModel::signOut,
+                )
             }
         }
     }
@@ -100,14 +110,20 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun SignedInContent(user: GoogleUser, onSignOut: () -> Unit) {
+private fun SignedInContent(
+    user: GoogleUser,
+    info: InfoState,
+    onRefresh: () -> Unit,
+    onSignOut: () -> Unit,
+) {
+    val userName = "${user.firstName} ${user.lastName}".trim()
     Text(
         text = "Signed in as",
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Text(
-        text = "${user.firstName} ${user.lastName}".trim(),
+        text = userName,
         style = MaterialTheme.typography.headlineSmall,
         modifier = Modifier.testTag("signed_in_name"),
     )
@@ -116,11 +132,70 @@ private fun SignedInContent(user: GoogleUser, onSignOut: () -> Unit) {
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.testTag("signed_in_email"),
     )
-    Spacer(Modifier.height(32.dp))
+    Spacer(Modifier.height(24.dp))
 
-    // Step 6 will render the server / client info table here.
+    when (info) {
+        InfoState.Loading -> {
+            CircularProgressIndicator(modifier = Modifier.testTag("info_loading"))
+            Spacer(Modifier.height(8.dp))
+            Text("Connecting to server…", style = MaterialTheme.typography.bodySmall)
+        }
+        is InfoState.Failed -> {
+            Text(
+                text = info.message,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.testTag("info_error"),
+            )
+            Spacer(Modifier.height(12.dp))
+            Button(onClick = onRefresh, modifier = Modifier.testTag("btn_refresh")) { Text("Retry") }
+        }
+        is InfoState.Loaded -> {
+            InfoTable(info = info.info, userName = userName)
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = onRefresh, modifier = Modifier.testTag("btn_refresh")) { Text("Refresh") }
+        }
+    }
 
+    Spacer(Modifier.height(24.dp))
     OutlinedButton(onClick = onSignOut, modifier = Modifier.testTag("btn_sign_out")) {
         Text("Sign out")
+    }
+}
+
+@Composable
+private fun InfoTable(info: ConnectionInfo, userName: String) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+            InfoRow("Server IP address", info.serverIp, "info_server_ip", mono = true)
+            HorizontalDivider()
+            InfoRow("Client IP address", info.clientIp, "info_client_ip", mono = true)
+            HorizontalDivider()
+            InfoRow("Server local time", info.serverTime, "info_server_time", mono = true)
+            HorizontalDivider()
+            InfoRow("Client local time", info.clientTime, "info_client_time", mono = true)
+            HorizontalDivider()
+            InfoRow("Developer (from server)", "${info.owner.first} ${info.owner.last}", "info_owner_name")
+            HorizontalDivider()
+            InfoRow("Logged-in user (Google)", userName, "info_user_name")
+        }
+    }
+}
+
+@Composable
+private fun InfoRow(label: String, value: String, tag: String, mono: Boolean = false) {
+    Column(modifier = Modifier.padding(vertical = 10.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            fontFamily = if (mono) FontFamily.Monospace else FontFamily.Default,
+            modifier = Modifier.testTag(tag),
+        )
     }
 }
