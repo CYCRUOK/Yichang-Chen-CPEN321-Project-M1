@@ -1,0 +1,5 @@
+# Keep Unix line endings for files that run on Linux (VM, CI, Docker)
+*.sh text eol=lf
+gradlew text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
