@@ -22,4 +22,8 @@ export const env = {
   /** Developer's name, returned by GET /api/name. */
   ownerFirstName: optional('OWNER_FIRST_NAME') ?? 'First',
   ownerLastName: optional('OWNER_LAST_NAME') ?? 'Last',
+  /** Course-provided pixel stream relayed to the app on /ws. */
+  upstreamWsUrl: optional('UPSTREAM_WS_URL') ?? 'wss://8.229.22.124',
+  /** Set UPSTREAM_WS_INSECURE=true to accept a self-signed upstream certificate. */
+  upstreamWsRejectUnauthorized: optional('UPSTREAM_WS_INSECURE') !== 'true',
 } as const;
