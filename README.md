@@ -42,6 +42,24 @@ Install the following before the frontend or backend setup steps:
 - **Release build**: Go to Build -> Generate Signed App Bundle or APK -> APK. Follow the on-screen instructions to create a key, and select the "release" build variant. You will then have to manually install the generated APK on your device or the running emulator.
 
 
+### Google sign-in
+
+Button 1 signs the user in with Google via Jetpack Credential Manager. It needs an OAuth
+setup in [Google Cloud Console](https://console.cloud.google.com) (APIs & Services -> Credentials):
+
+1. An **Android** OAuth client with package name `com.example.cpen321application` and the
+   SHA-1 of the key that signs the APK. For a debug APK:
+   ```bash
+   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android | grep SHA1
+   ```
+2. A **Web application** OAuth client. Its client ID goes into `frontend/local.properties`
+   as `GOOGLE_CLIENT_ID` (it is baked into the APK as `BuildConfig.GOOGLE_CLIENT_ID`).
+3. While the OAuth consent screen is in *Testing* mode, only accounts listed under
+   *Audience -> Test users* can sign in; publish the app to allow any Google account.
+
+The account picker is system UI and is verified manually; the login screen states are
+covered by `LoginScreenTest` with a fake authenticator.
+
 ### Backend Configuration
 
 Ensure the backend server is running and update the base URL in the app configuration if needed.
