@@ -60,6 +60,22 @@ setup in [Google Cloud Console](https://console.cloud.google.com) (APIs & Servic
 The account picker is system UI and is verified manually; the login screen states are
 covered by `LoginScreenTest` with a fake authenticator.
 
+### Button 3: Timer and "While You Waited"
+
+The timer takes minutes + seconds. When it goes off the phone vibrates, posts a
+notification (so it works from the background; Android 13+ asks for notification
+permission on first Start), shows confetti, and then a "While you waited" summary of what
+happened in the world during the countdown:
+
+- how far the International Space Station flew, plotted on a mini world map. The ISS
+  position is fetched from the free, key-less `https://api.wheretheiss.at` API at Start and
+  at the end; the distance is a great-circle computation done in the app.
+- how far Earth moved along its orbit, how far light travelled (in Moon round trips),
+  whether the sunlight that left the Sun at Start has arrived yet, approximate heartbeats,
+  blinks and worldwide births.
+
+If the ISS API is unreachable the summary still shows the locally computed facts.
+
 ### Backend Configuration
 
 Ensure the backend server is running and update the base URL in the app configuration if needed.
