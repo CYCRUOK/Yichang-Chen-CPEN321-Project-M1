@@ -10,6 +10,9 @@ import androidx.navigation.compose.rememberNavController
 import com.example.cpen321application.BuildConfig
 import com.example.cpen321application.auth.CredentialManagerGoogleAuthenticator
 import com.example.cpen321application.auth.GoogleAuthenticator
+import com.example.cpen321application.live.OkHttpPixelStream
+import com.example.cpen321application.live.PixelStream
+import com.example.cpen321application.live.relayWebSocketUrl
 import com.example.cpen321application.timer.IssTracker
 import com.example.cpen321application.timer.WhereTheIssAtTracker
 import com.example.cpen321application.ui.home.HomeScreen
@@ -31,7 +34,9 @@ fun AppNavHost(
     navController: NavHostController = rememberNavController(),
     authenticator: GoogleAuthenticator? = null,
     issTracker: IssTracker = WhereTheIssAtTracker(),
+    pixelStream: PixelStream? = null,
 ) {
+    val stream = pixelStream ?: remember(apiBaseUrl) { OkHttpPixelStream(relayWebSocketUrl(apiBaseUrl)) }
     // Credential Manager needs the Activity context to show its system sheet,
     // so the real authenticator is created here rather than in MainActivity.
     val context = LocalContext.current
@@ -55,7 +60,10 @@ fun AppNavHost(
             )
         }
         composable(Routes.LIVE_UPDATES) {
-            LiveUpdatesScreen(onBack = { navController.popBackStack() })
+            LiveUpdatesScreen(
+                onBack = { navController.popBackStack() },
+                stream = stream,
+            )
         }
         composable(Routes.TIMER) {
             TimerScreen(
