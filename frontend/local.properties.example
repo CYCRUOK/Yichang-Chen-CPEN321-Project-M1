@@ -8,3 +8,11 @@ API_BASE_URL=http://10.0.2.2:3000
 GOOGLE_CLIENT_ID=
 
 # Other API keys, secrets, and configurations
+# Release signing (optional). Without these, `assembleRelease` signs with the
+# debug key. Generate a keystore with:
+#   keytool -genkeypair -keystore ~/.android/cpen321-release.jks -alias cpen321 -keyalg RSA -keysize 2048 -validity 10000
+# and register its SHA-1 as an Android OAuth client in Google Cloud Console.
+RELEASE_STORE_FILE=
+RELEASE_STORE_PASSWORD=
+RELEASE_KEY_ALIAS=
+RELEASE_KEY_PASSWORD=

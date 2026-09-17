@@ -16,7 +16,7 @@
 set -euo pipefail
 
 DOMAIN="${DOMAIN:?set DOMAIN, e.g. DOMAIN=34-12-34-56.sslip.io}"
-EMAIL="${EMAIL:?set EMAIL for Let's Encrypt expiry notices}"
+EMAIL="${EMAIL:?set EMAIL for Lets Encrypt expiry notices}"
 BACKEND_PORT="${BACKEND_PORT:-3000}"
 
 info() { printf '\033[1;34m==> %s\033[0m\n' "$*"; }

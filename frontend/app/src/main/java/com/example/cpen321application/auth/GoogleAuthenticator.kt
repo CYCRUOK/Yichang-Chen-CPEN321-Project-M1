@@ -57,7 +57,9 @@ class CredentialManagerGoogleAuthenticator(
             // `context` must be an Activity so the system sheet can be shown.
             credentialManager.getCredential(context, request)
         } catch (e: GetCredentialCancellationException) {
-            throw SignInException("Sign-in cancelled", e)
+            // Also what Credential Manager reports when this APK's signing key is not
+            // registered as an Android OAuth client (developer error 10).
+            throw SignInException("Sign-in cancelled, or this build's signing key is not registered in Google Cloud Console", e)
         } catch (e: NoCredentialException) {
             throw SignInException("No Google account available on this device", e)
         } catch (e: GetCredentialException) {

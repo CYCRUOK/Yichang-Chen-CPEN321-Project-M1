@@ -44,8 +44,24 @@ android {
         )
     }
 
+    // Release signing comes from local.properties (RELEASE_STORE_FILE etc.). When
+    // they are absent the release build falls back to the debug key so it still
+    // installs; Google sign-in then needs that key's SHA-1 registered instead.
+    val releaseStoreFile = localProperty("RELEASE_STORE_FILE")
+    if (releaseStoreFile.isNotEmpty()) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = localProperty("RELEASE_STORE_PASSWORD")
+                keyAlias = localProperty("RELEASE_KEY_ALIAS")
+                keyPassword = localProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = if (releaseStoreFile.isNotEmpty()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
