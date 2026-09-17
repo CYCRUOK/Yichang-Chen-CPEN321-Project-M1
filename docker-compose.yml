@@ -1,4 +1,7 @@
 # Requires Docker Compose v2.24+ for the `env_file: required:` syntax below.
+#
+# M1 has no database, so only the backend runs here. (The course template's
+# MongoDB service will come back when the project needs persistence.)
 
 name: cpen321-project
 
@@ -8,28 +11,8 @@ services:
     build: ./backend
     # Published on all interfaces so a physical Android device on the same Wi-Fi
     # can reach it. Emulators use http://10.0.2.2:3000/api/ either way.
+    # On the cloud VM, nginx terminates TLS on 443 and proxies to this port.
     ports:
       - "3000:3000"
     env_file:
       - path: ./backend/.env
-    environment:
-      MONGODB_URI: mongodb://mongo:27017/cpen321
-    depends_on:
-      mongo:
-        condition: service_healthy
-
-  mongo:
-    image: mongo:7
-    restart: unless-stopped
-    volumes:
-      - mongo-data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-
-
-volumes:
-  mongo-data:
